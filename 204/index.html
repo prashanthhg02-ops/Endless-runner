@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101922">
+  <title>Neon Dash — Endless Runner</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #101922;
+      color: #f5f7fb;
+      font-synthesis: none;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      overflow-x: hidden;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(41, 86, 103, .28), transparent 55%),
+        #101922;
+    }
+
+    .game-shell { width: min(100%, 1000px); }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(102, 240, 205, .35);
+      border-radius: 12px;
+      color: #65f0cd;
+      background: rgba(69, 212, 183, .1);
+      font-size: 19px;
+      font-weight: 900;
+      box-shadow: 0 0 24px rgba(69, 212, 183, .12);
+    }
+    .brand-name { font-size: 15px; font-weight: 800; letter-spacing: .16em; }
+    .brand-caption { margin-top: 3px; color: #82929e; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; }
+
+    .hud { display: flex; align-items: center; gap: 10px; }
+    .stat {
+      min-width: 92px;
+      padding: 8px 13px;
+      border: 1px solid rgba(183, 204, 214, .12);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .035);
+      text-align: right;
+    }
+    .stat-label { display: block; color: #84939d; font-size: 9px; font-weight: 700; letter-spacing: .16em; }
+    .stat-value { display: block; margin-top: 2px; color: #f6f8fa; font-size: 17px; font-variant-numeric: tabular-nums; font-weight: 800; }
+    .stat.best .stat-value { color: #ffc96b; }
+    .icon-button {
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(183, 204, 214, .14);
+      border-radius: 12px;
+      color: #dce6e9;
+      background: rgba(255, 255, 255, .045);
+      cursor: pointer;
+      font-size: 15px;
+      transition: background .2s, transform .2s;
+    }
+    .icon-button:hover { transform: translateY(-1px); background: rgba(255, 255, 255, .1); }
+
+    .stage {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(153, 201, 203, .2);
+      border-radius: 20px;
+      background: #182832;
+      box-shadow: 0 26px 80px rgba(0, 0, 0, .38), 0 0 45px rgba(41, 189, 165, .07);
+      isolation: isolate;
+    }
+    canvas { display: block; width: 100%; aspect-ratio: 16 / 9; touch-action: manipulation; }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: rgba(8, 17, 24, .38);
+      backdrop-filter: blur(4px);
+      transition: opacity .2s, visibility .2s;
+    }
+    .overlay.hidden { visibility: hidden; opacity: 0; pointer-events: none; }
+    .card { width: min(100%, 410px); text-align: center; }
+    .eyebrow { color: #67e8c5; font-size: 10px; font-weight: 800; letter-spacing: .25em; text-transform: uppercase; }
+    h1 { margin: 12px 0 9px; font-size: clamp(32px, 6vw, 58px); line-height: .98; letter-spacing: -.06em; }
+    .subtitle { max-width: 330px; margin: 0 auto; color: #b2c0c5; font-size: 14px; line-height: 1.6; }
+    .play-button {
+      min-width: 166px;
+      margin-top: 25px;
+      padding: 13px 21px;
+      border: 0;
+      border-radius: 12px;
+      color: #10211f;
+      background: #6aefc8;
+      box-shadow: 0 7px 24px rgba(66, 228, 184, .22);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      transition: transform .2s, background .2s;
+    }
+    .play-button:hover { transform: translateY(-2px); background: #89f5d5; }
+    .hint { margin-top: 17px; color: #9aabb2; font-size: 11px; }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 13px;
+      color: #80919b;
+      font-size: 11px;
+    }
+    .key {
+      display: inline-grid;
+      min-width: 23px;
+      height: 22px;
+      margin: 0 2px;
+      padding: 0 5px;
+      place-items: center;
+      border: 1px solid rgba(174, 194, 204, .2);
+      border-radius: 6px;
+      color: #c9d6da;
+      background: rgba(255, 255, 255, .04);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 580px) {
+      body { padding: 15px; }
+      .topbar { align-items: flex-start; }
+      .brand { gap: 8px; }
+      .brand-mark { width: 33px; height: 33px; }
+      .brand-name { font-size: 12px; }
+      .brand-caption { font-size: 8px; }
+      .hud { gap: 5px; }
+      .stat { min-width: 62px; padding: 6px 8px; }
+      .stat-label { font-size: 8px; }
+      .stat-value { font-size: 14px; }
+      .icon-button { width: 34px; height: 34px; }
+      .stage { border-radius: 14px; }
+      .footer { font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">↗</div>
+        <div>
+          <div class="brand-name">NEON DASH</div>
+          <div class="brand-caption">Keep moving forward</div>
+        </div>
+      </div>
+      <div class="hud" aria-label="Game scores">
+        <div class="stat"><span class="stat-label">SCORE</span><span class="stat-value" id="score">00000</span></div>
+        <div class="stat best"><span class="stat-label">BEST</span><span class="stat-value" id="best">00000</span></div>
+        <button class="icon-button" id="pause-button" type="button" aria-label="Pause game" title="Pause (P)">Ⅱ</button>
+      </div>
+    </header>
+    <section class="stage" aria-label="Endless runner game">
+      <canvas id="game" aria-label="Dodge the obstacles by jumping"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="card">
+          <div class="eyebrow" id="eyebrow">A little run. A big escape.</div>
+          <h1 id="title">NEON<br>DASH</h1>
+          <p class="subtitle" id="subtitle">The city never sleeps. Jump the gaps, dodge the blocks, and see how far you can go.</p>
+          <button class="play-button" id="play-button" type="button">Start running</button>
+          <p class="hint" id="hint">Press <span class="key">SPACE</span> or tap to jump</p>
+        </div>
+      </div>
+    </section>
+    <footer class="footer">
+      <span><span class="key">SPACE</span> <span class="key">↑</span> or tap to jump</span>
+      <span>Press <span class="key">P</span> to pause</span>
+    </footer>
+  </main>
+  <script>
+    (() => {
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      const overlay = document.getElementById("overlay");
+      const title = document.getElementById("title");
+      const eyebrow = document.getElementById("eyebrow");
+      const subtitle = document.getElementById("subtitle");
+      const playButton = document.getElementById("play-button");
+      const hint = document.getElementById("hint");
+      const scoreElement = document.getElementById("score");
+      const bestElement = document.getElementById("best");
+      const pauseButton = document.getElementById("pause-button");
+
+      const width = 960;
+      const height = 540;
+      const groundY = 414;
+      const playerX = 150;
+      let pixelRatio = 1;
+      let lastFrame = 0;
+      let elapsed = 0;
+      let distance = 0;
+      let score = 0;
+      let speed = 360;
+      let spawnTimer = 0;
+      let state = "ready";
+      let obstacles = [];
+      let particles = [];
+      let buildings = [];
+      let best = 0;
+
+      try {
+        best = Number(localStorage.getItem("neon-dash-best")) || 0;
+      } catch (error) {
+        console.warn("Could not read the saved high score.", error);
+      }
+      bestElement.textContent = formatScore(best);
+
+      const player = { y: groundY, vy: 0, width: 38, height: 54, onGround: true, runTime: 0 };
+
+      function formatScore(value) {
+        return String(Math.floor(value)).padStart(5, "0");
+      }
+
+      function resizeCanvas() {
+        const bounds = canvas.getBoundingClientRect();
+        pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(bounds.width * pixelRatio);
+        canvas.height = Math.round(bounds.height * pixelRatio);
+        ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
+      }
+
+      function makeBuildings() {
+        buildings = [];
+        let x = 0;
+        while (x < width + 120) {
+          const w = 34 + Math.random() * 74;
+          buildings.push({ x, w, h: 45 + Math.random() * 150, shade: Math.random() });
+          x += w + 9 + Math.random() * 20;
+        }
+      }
+
+      function startGame() {
+        state = "playing";
+        elapsed = 0;
+        distance = 0;
+        score = 0;
+        speed = 360;
+        spawnTimer = 1.25;
+        obstacles = [];
+        particles = [];
+        player.y = groundY;
+        player.vy = 0;
+        player.onGround = true;
+        player.runTime = 0;
+        scoreElement.textContent = formatScore(score);
+        overlay.classList.add("hidden");
+        pauseButton.textContent = "Ⅱ";
+        pauseButton.setAttribute("aria-label", "Pause game");
+      }
+
+      function showOverlay(mode) {
+        overlay.classList.remove("hidden");
+        if (mode === "paused") {
+          eyebrow.textContent = "Take a breather";
+          title.innerHTML = "PAUSED";
+          subtitle.textContent = "Your run is waiting right where you left it.";
+          playButton.textContent = "Keep running";
+          hint.textContent = "Press P or tap the button to continue";
+        } else if (mode === "over") {
+          eyebrow.textContent = "The city wins this round";
+          title.innerHTML = "RUN<br>OVER";
+          subtitle.textContent = `You made it ${Math.floor(distance)}m. Every run is a chance to go further.`;
+          playButton.textContent = "Run it back";
+          hint.textContent = "Press SPACE or tap to try again";
+        } else {
+          eyebrow.textContent = "A little run. A big escape.";
+          title.innerHTML = "NEON<br>DASH";
+          subtitle.textContent = "The city never sleeps. Jump the gaps, dodge the blocks, and see how far you can go.";
+          playButton.textContent = "Start running";
+          hint.innerHTML = 'Press <span class="key">SPACE</span> or tap to jump';
+        }
+      }
+
+      function jump() {
+        if (state === "ready" || state === "over") {
+          startGame();
+          return;
+        }
+        if (state !== "playing" || !player.onGround) return;
+        player.vy = -760;
+        player.onGround = false;
+        for (let i = 0; i < 7; i++) {
+          particles.push({
+            x: playerX + 8 + Math.random() * 18,
+            y: groundY - 2,
+            vx: -40 - Math.random() * 130,
+            vy: -25 - Math.random() * 110,
+            life: .35 + Math.random() * .25,
+            size: 2 + Math.random() * 3,
+            color: "#68edc9"
+          });
+        }
+      }
+
+      function togglePause() {
+        if (state === "playing") {
+          state = "paused";
+          showOverlay("paused");
+          pauseButton.textContent = "▶";
+          pauseButton.setAttribute("aria-label", "Resume game");
+        } else if (state === "paused") {
+          state = "playing";
+          overlay.classList.add("hidden");
+          pauseButton.textContent = "Ⅱ";
+          pauseButton.setAttribute("aria-label", "Pause game");
+        }
+      }
+
+      function spawnObstacle() {
+        const kind = Math.random() < .58 ? "crate" : "drone";
+        const obstacle = kind === "crate"
+          ? { kind, x: width + 35, y: groundY - 36, w: 34, h: 36 }
+          : { kind, x: width + 35, y: groundY - 83 - Math.random() * 25, w: 48, h: 28 };
+        obstacles.push(obstacle);
+        spawnTimer = Math.max(0.82, 1.45 + Math.random() * .75 - (speed - 360) / 900);
+      }
+
+      function endGame() {
+        state = "over";
+        if (score > best) {
+          best = score;
+          bestElement.textContent = formatScore(best);
+          try {
+            localStorage.setItem("neon-dash-best", String(best));
+          } catch (error) {
+            console.warn("Could not save the high score.", error);
+          }
+        }
+        showOverlay("over");
+      }
+
+      function update(dt) {
+        if (state !== "playing") return;
+        elapsed += dt;
+        speed = Math.min(680, 360 + elapsed * 9);
+        distance += speed * dt / 24;
+        score = Math.floor(distance);
+        scoreElement.textContent = formatScore(score);
+        player.runTime += dt * (speed / 360);
+
+        player.vy += 2050 * dt;
+        player.y += player.vy * dt;
+        if (player.y >= groundY) {
+          player.y = groundY;
+          player.vy = 0;
+          player.onGround = true;
+        }
+
+        spawnTimer -= dt;
+        if (spawnTimer <= 0) spawnObstacle();
+        obstacles.forEach((obstacle) => { obstacle.x -= speed * dt; });
+        obstacles = obstacles.filter((obstacle) => obstacle.x + obstacle.w > -20);
+
+        const playerBox = {
+          x: playerX + 5,
+          y: player.y - player.height + 7,
+          w: player.width - 10,
+          h: player.height - 10
+        };
+        for (const obstacle of obstacles) {
+          const inset = obstacle.kind === "crate" ? 4 : 8;
+          if (playerBox.x < obstacle.x + obstacle.w - inset &&
+              playerBox.x + playerBox.w > obstacle.x + inset &&
+              playerBox.y < obstacle.y + obstacle.h - 3 &&
+              playerBox.y + playerBox.h > obstacle.y + 3) {
+            endGame();
+            break;
+          }
+        }
+
+        particles.forEach((particle) => {
+          particle.x += particle.vx * dt;
+          particle.y += particle.vy * dt;
+          particle.vy += 300 * dt;
+          particle.life -= dt;
+        });
+        particles = particles.filter((particle) => particle.life > 0);
+
+        const shift = speed * dt * .18;
+        buildings.forEach((building) => { building.x -= shift; });
+        if (buildings[0] && buildings[0].x + buildings[0].w < 0) {
+          const first = buildings.shift();
+          const last = buildings[buildings.length - 1];
+          buildings.push({
+            x: last.x + last.w + 14 + Math.random() * 22,
+            w: first.w,
+            h: 45 + Math.random() * 150,
+            shade: Math.random()
+          });
+        }
+      }
+
+      function drawBackground() {
+        const sky = ctx.createLinearGradient(0, 0, 0, height);
+        sky.addColorStop(0, "#14232e");
+        sky.addColorStop(.58, "#263d45");
+        sky.addColorStop(1, "#52645b");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, width, height);
+
+        const glow = ctx.createRadialGradient(715, 174, 10, 715, 174, 210);
+        glow.addColorStop(0, "rgba(255, 197, 116, .30)");
+        glow.addColorStop(1, "rgba(255, 197, 116, 0)");
+        ctx.fillStyle = glow;
+        ctx.fillRect(430, 0, 530, 400);
+
+        ctx.fillStyle = "#edbd7b";
+        ctx.globalAlpha = .82;
+        ctx.beginPath();
+        ctx.arc(715, 176, 37, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        buildings.forEach((building) => {
+          const top = groundY - building.h;
+          const shade = Math.floor(36 + building.shade * 22);
+          ctx.fillStyle = `rgb(${shade}, ${shade + 10}, ${shade + 13})`;
+          ctx.fillRect(building.x, top, building.w, building.h);
+          ctx.fillStyle = "rgba(246, 201, 137, .20)";
+          for (let wx = building.x + 8; wx < building.x + building.w - 5; wx += 14) {
+            for (let wy = top + 13; wy < groundY - 8; wy += 20) {
+              if ((Math.floor(wx + wy) % 3) !== 0) ctx.fillRect(wx, wy, 4, 7);
+            }
+          }
+        });
+
+        ctx.fillStyle = "#253940";
+        ctx.fillRect(0, groundY, width, height - groundY);
+        ctx.fillStyle = "#6de6c4";
+        ctx.fillRect(0, groundY, width, 3);
+        ctx.fillStyle = "rgba(158, 192, 181, .10)";
+        ctx.fillRect(0, groundY + 4, width, 2);
+
+        const stripeOffset = -(elapsed * speed * .7 % 84);
+        ctx.fillStyle = "rgba(218, 230, 216, .25)";
+        for (let x = stripeOffset; x < width; x += 84) {
+          ctx.fillRect(x, groundY + 53, 39, 3);
+        }
+      }
+
+      function drawPlayer() {
+        const jumpHeight = groundY - player.y;
+        const shadowScale = Math.max(.35, 1 - jumpHeight / 260);
+        ctx.fillStyle = `rgba(4, 13, 16, ${.34 * shadowScale})`;
+        ctx.beginPath();
+        ctx.ellipse(playerX + 20, groundY + 2, 26 * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const bottom = player.y;
+        const bob = player.onGround ? Math.sin(player.runTime * 15) * 2 : 0;
+        const swing = player.onGround ? Math.sin(player.runTime * 15) * 8 : 3;
+        const top = bottom - player.height + bob;
+
+        ctx.save();
+        ctx.shadowColor = "rgba(95, 240, 202, .45)";
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = "#f4c68d";
+        ctx.beginPath();
+        ctx.arc(playerX + 20, top + 8, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#72e7c6";
+        ctx.beginPath();
+        ctx.roundRect(playerX + 8, top + 18, 24, 23, 7);
+        ctx.fill();
+        ctx.fillStyle = "#d4fff0";
+        ctx.fillRect(playerX + 24, top + 22, 10, 4);
+
+        ctx.strokeStyle = "#b8f7e4";
+        ctx.lineWidth = 6;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(playerX + 13, top + 38);
+        ctx.lineTo(playerX + 10 + swing * .38, bottom - 1);
+        ctx.moveTo(playerX + 27, top + 38);
+        ctx.lineTo(playerX + 28 - swing * .38, bottom - 1);
+        ctx.stroke();
+        ctx.strokeStyle = "#f4c68d";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(playerX + 10, top + 23);
+        ctx.lineTo(playerX + 2 - swing * .25, top + 33);
+        ctx.moveTo(playerX + 30, top + 24);
+        ctx.lineTo(playerX + 38 + swing * .25, top + 31);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawObstacle(obstacle) {
+        ctx.save();
+        if (obstacle.kind === "crate") {
+          ctx.shadowColor = "rgba(255, 131, 99, .25)";
+          ctx.shadowBlur = 12;
+          ctx.fillStyle = "#ef8065";
+          ctx.beginPath();
+          ctx.roundRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h, 5);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = "#ffd0a7";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(obstacle.x + 7, obstacle.y + 7);
+          ctx.lineTo(obstacle.x + obstacle.w - 7, obstacle.y + obstacle.h - 7);
+          ctx.moveTo(obstacle.x + obstacle.w - 7, obstacle.y + 7);
+          ctx.lineTo(obstacle.x + 7, obstacle.y + obstacle.h - 7);
+          ctx.stroke();
+        } else {
+          ctx.shadowColor = "rgba(255, 93, 113, .6)";
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = "#ff647b";
+          ctx.beginPath();
+          ctx.roundRect(obstacle.x + 8, obstacle.y + 4, obstacle.w - 16, obstacle.h - 8, 10);
+          ctx.fill();
+          ctx.fillRect(obstacle.x, obstacle.y, 12, 5);
+          ctx.fillRect(obstacle.x + obstacle.w - 12, obstacle.y, 12, 5);
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "#fff0dd";
+          ctx.fillRect(obstacle.x + 22, obstacle.y + 11, 5, 5);
+        }
+        ctx.restore();
+      }
+
+      function drawParticles() {
+        particles.forEach((particle) => {
+          ctx.globalAlpha = Math.max(0, particle.life * 2);
+          ctx.fillStyle = particle.color;
+          ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
+        });
+        ctx.globalAlpha = 1;
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, width, height);
+        drawBackground();
+        drawParticles();
+        obstacles.forEach(drawObstacle);
+        drawPlayer();
+        if (state === "playing") {
+          ctx.fillStyle = "rgba(255, 255, 255, .7)";
+          ctx.font = "700 11px system-ui, sans-serif";
+          ctx.letterSpacing = "2px";
+          ctx.fillText(`${Math.floor(speed)} M/S`, width - 105, 35);
+        }
+      }
+
+      function frame(timestamp) {
+        const dt = Math.min((timestamp - lastFrame) / 1000 || 0, .033);
+        lastFrame = timestamp;
+        update(dt);
+        render();
+        requestAnimationFrame(frame);
+      }
+
+      playButton.addEventListener("click", () => {
+        if (state === "paused") togglePause();
+        else startGame();
+      });
+      pauseButton.addEventListener("click", togglePause);
+      canvas.addEventListener("pointerdown", jump);
+      document.addEventListener("keydown", (event) => {
+        if (event.code === "Space" || event.code === "ArrowUp" || event.code === "KeyW") {
+          event.preventDefault();
+          jump();
+        } else if (event.code === "KeyP" || event.code === "Escape") {
+          togglePause();
+        }
+      });
+      window.addEventListener("resize", resizeCanvas);
+
+      makeBuildings();
+      resizeCanvas();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
